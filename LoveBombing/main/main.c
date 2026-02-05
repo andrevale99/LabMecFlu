@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#include "LabMecFluUART.h"
-#include "LabMecFlu.h"
+#include "LabMecFluMAIN.h"
 
 void app_main(void)
 {

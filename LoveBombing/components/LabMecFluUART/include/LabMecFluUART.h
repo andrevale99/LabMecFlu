@@ -28,6 +28,10 @@ typedef struct {
     int value;
 } LabMecFluUART_Command_t;
 
+/// @brief Funcao de configuracoes iniciais do periferico
+/// do UART
+/// @param handleQueue fila que sera passada entre as tasks UART e PWM
+/// @return ESP_OK Se o periferico for corretamente configurado
 esp_err_t LabMecFluUART_init(QueueHandle_t *handleQueue);
 
 void vTaskUART(void *pvParameters);

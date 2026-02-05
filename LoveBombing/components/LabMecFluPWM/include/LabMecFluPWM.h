@@ -17,6 +17,10 @@
 
 #define POTENCIA_MAX_BOMBA 95
 
+/// @brief Funcao de configuracoes iniciais do periferico
+/// do PWM
+/// @param handleQueue fila que sera passada entre as tasks UART e PWM
+/// @return ESP_OK Se o periferico for corretamente configurado
 esp_err_t LabMecFluPWM_config(QueueHandle_t *handleQueue);
 
 void vTaskPWM(void *pvParameters);
