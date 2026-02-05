@@ -4,13 +4,13 @@ static QueueHandle_t *handleUART_to_PWM;
 
 static const char *TAG = "[LabMecFluUART]";
 
-static void ProcessBuffer(LabMecFluUART_Command_t *command,
+static esp_err_t ProcessBuffer(LabMecFluUART_Command_t *command,
                           uint8_t *buffer, uint8_t length)
 {
     if (length < 2)
     {
         ESP_LOGW(TAG, "Buffer muito curto para processar");
-        return;
+        return ESP_ERR_INVALID_SIZE;
     }
 
     command->cmd = buffer[0];
@@ -18,7 +18,12 @@ static void ProcessBuffer(LabMecFluUART_Command_t *command,
     if (command->cmd == 'S' || command->cmd == 'T')
         command->value = atoi((const char *)&buffer[1]);
     else
+    {
         ESP_LOGW(TAG, "Comando desconhecido: %c", command->cmd);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    return ESP_OK;
 }
 
 esp_err_t LabMecFluUART_init(QueueHandle_t *handleQueue)
@@ -86,12 +91,14 @@ void vTaskUART(void *pvParameters)
 
             if (buffer[cont - 1] == '\r' || buffer[cont - 1] == '\n' || cont == BUF_SIZE)
             {
-                ProcessBuffer(&command, buffer, cont);
-                ESP_LOGI(TAG, "Comando recebido: %c, Valor: %d",
-                         command.cmd, command.value);
+                if (ProcessBuffer(&command, buffer, cont) == ESP_OK)
+                {
+                    ESP_LOGI(TAG, "Comando recebido: %c, Valor: %d",
+                             command.cmd, command.value);
 
-                xQueueSend(*handleUART_to_PWM, (void *)&command,
-                           pdMS_TO_TICKS(10));
+                    xQueueSend(*handleUART_to_PWM, (void *)&command,
+                               pdMS_TO_TICKS(10));
+                }
 
                 memset(buffer, 0, cont);
                 cont = 0;
