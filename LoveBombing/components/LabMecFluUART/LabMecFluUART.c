@@ -65,7 +65,8 @@ esp_err_t LabMecFluUART_init(QueueHandle_t *handleQueue)
 
     ESP_LOGI(TAG, "UART inicializada com sucesso");
 
-    xTaskCreate(vTaskUART, "vTaskUART", 2048, NULL, 2, NULL);
+    // xTaskCreate(vTaskUART, "vTaskUART", 2048, NULL, 2, NULL);
+    xTaskCreatePinnedToCore(vTaskUART, "vTaskUART", 2048, NULL, 2, NULL, 0);
 
     handleUART_to_PWM = handleQueue;
 

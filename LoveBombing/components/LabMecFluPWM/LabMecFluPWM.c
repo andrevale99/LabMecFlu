@@ -42,10 +42,13 @@ void vTaskPWM(void *pvParameters)
 {
     uint32_t duty = 0;
     LabMecFluUART_Command_t command;
+    TickType_t lastWake;
+    const TickType_t periodo = pdMS_TO_TICKS(2);
     while (1)
     {
+        lastWake = xTaskGetTickCount();
         if (xQueueReceive(*handleUART_to_PWM, &command,
-                          pdMS_TO_TICKS(10)) == pdPASS)
+                          portMAX_DELAY) == pdPASS)
         {
             if (command.cmd == 'S')
             {
@@ -72,5 +75,6 @@ void vTaskPWM(void *pvParameters)
                 // Handle other commands if necessary
             }
         }
+        vTaskDelayUntil(&lastWake, periodo);
     }
 }
