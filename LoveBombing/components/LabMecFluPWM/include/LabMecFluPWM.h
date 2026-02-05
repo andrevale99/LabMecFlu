@@ -15,6 +15,8 @@
 
 #define BOMBA_GPIO GPIO_NUM_13
 
+#define POTENCIA_MAX_BOMBA 95
+
 esp_err_t LabMecFluPWM_config(QueueHandle_t *handleQueue);
 
 void vTaskPWM(void *pvParameters);

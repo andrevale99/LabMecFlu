@@ -27,7 +27,13 @@ esp_err_t LabMecFluPWM_config(QueueHandle_t *handleQueue)
 
     handleUART_to_PWM = handleQueue;
 
-    xTaskCreate(vTaskPWM, "vTaskPWM", 2048, NULL, 2, NULL);
+    xTaskCreatePinnedToCore(vTaskPWM,
+                            "vTaskPWM",
+                            2048,
+                            NULL,
+                            2,
+                            NULL,
+                            1); // Pin the task to core 1
 
     return ESP_OK;
 }
@@ -35,15 +41,36 @@ esp_err_t LabMecFluPWM_config(QueueHandle_t *handleQueue)
 void vTaskPWM(void *pvParameters)
 {
     uint32_t duty = 0;
-    const uint32_t duty_max = 255; // Max duty for 8-bit resolution
     LabMecFluUART_Command_t command;
     while (1)
     {
         if (xQueueReceive(*handleUART_to_PWM, &command,
-                          pdMS_TO_TICKS(100)) == pdPASS)
+                          pdMS_TO_TICKS(10)) == pdPASS)
         {
-             ESP_LOGI(TAG, "Comando recebido: %c, Valor: %d",
-                         command.cmd, command.value);
+            if (command.cmd == 'S')
+            {
+                if (command.value < 0)
+                    duty = 0;
+                else if (command.value > POTENCIA_MAX_BOMBA)
+                    duty = POTENCIA_MAX_BOMBA;
+                else
+                    duty = command.value;
+
+                duty = (duty / 100.) * 255;
+
+                ESP_LOGI(TAG, "Ajustando duty cycle para: %d", duty);
+
+                // Set the duty cycle
+                ESP_ERROR_CHECK(ledc_set_duty(LEDC_HIGH_SPEED_MODE,
+                                              LEDC_CHANNEL_0,
+                                              duty));
+                ESP_ERROR_CHECK(ledc_update_duty(LEDC_HIGH_SPEED_MODE,
+                                                 LEDC_CHANNEL_0));
+            }
+            else if (command.cmd == 'T')
+            {
+                // Handle other commands if necessary
+            }
         }
     }
 }
