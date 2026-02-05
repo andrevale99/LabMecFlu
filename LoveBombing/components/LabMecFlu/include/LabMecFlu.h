@@ -3,8 +3,11 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
-#include "../../components/ads111x/include/ads111x.h"
+#include "ads111x.h"
+#include "LabMecFluUART.h"
+#include "LabMecFluPWM.h"
 
 /**
  * Biblioteca para realizar processos
@@ -12,5 +15,7 @@
  * dos fluidos, como calculo de pressao
  * pelo ADS1115.
  */
+
+esp_err_t LabMecFlu_init(void);
 
 #endif

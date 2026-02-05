@@ -1,8 +1,27 @@
 #include "LabMecFluUART.h"
 
+static QueueHandle_t *handleUART_to_PWM;
+
 static const char *TAG = "[LabMecFluUART]";
 
-esp_err_t LabMecFluUART_init(void)
+static void ProcessBuffer(LabMecFluUART_Command_t *command,
+                          uint8_t *buffer, uint8_t length)
+{
+    if (length < 2)
+    {
+        ESP_LOGW(TAG, "Buffer muito curto para processar");
+        return;
+    }
+
+    command->cmd = buffer[0];
+
+    if (command->cmd == 'S' || command->cmd == 'T')
+        command->value = atoi((const char *)&buffer[1]);
+    else
+        ESP_LOGW(TAG, "Comando desconhecido: %c", command->cmd);
+}
+
+esp_err_t LabMecFluUART_init(QueueHandle_t *handleQueue)
 {
     esp_err_t ret;
 
@@ -41,7 +60,9 @@ esp_err_t LabMecFluUART_init(void)
 
     ESP_LOGI(TAG, "UART inicializada com sucesso");
 
-    xTaskCreate(vTaskUART, "vTaskUART", 2048, NULL, 10, NULL);
+    xTaskCreate(vTaskUART, "vTaskUART", 2048, NULL, 2, NULL);
+
+    handleUART_to_PWM = handleQueue;
 
     return ret;
 }
@@ -49,6 +70,7 @@ esp_err_t LabMecFluUART_init(void)
 void vTaskUART(void *pvParameters)
 {
     char cdataRecv;
+    LabMecFluUART_Command_t command;
     uint8_t buffer[BUF_SIZE];
     uint8_t cont = 0;
     while (1)
@@ -57,17 +79,21 @@ void vTaskUART(void *pvParameters)
                                   100 / portTICK_PERIOD_MS);
         if (len > 0)
         {
+
             buffer[cont++] = cdataRecv;
             uart_write_bytes(UART_NUM_0, &cdataRecv,
                              len);
 
             if (buffer[cont - 1] == '\r' || buffer[cont - 1] == '\n' || cont == BUF_SIZE)
             {
-                uart_write_bytes(UART_NUM_0, (const char *)buffer,
-                                 cont - 1);
-                
-                memset(buffer, 0, cont);
+                ProcessBuffer(&command, buffer, cont);
+                ESP_LOGI(TAG, "Comando recebido: %c, Valor: %d",
+                         command.cmd, command.value);
 
+                xQueueSend(*handleUART_to_PWM, (void *)&command,
+                           pdMS_TO_TICKS(10));
+
+                memset(buffer, 0, cont);
                 cont = 0;
             }
         }

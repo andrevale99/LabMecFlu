@@ -5,5 +5,5 @@
 
 void app_main(void)
 {
-    LabMecFluUART_init();
+    LabMecFlu_init();
 }

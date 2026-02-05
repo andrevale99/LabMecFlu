@@ -3,6 +3,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 #include "driver/uart.h"
 #include "driver/gpio.h"
@@ -22,7 +23,12 @@
  * no terminal.
  */
 
-esp_err_t LabMecFluUART_init(void);
+typedef struct {
+    char cmd;
+    int value;
+} LabMecFluUART_Command_t;
+
+esp_err_t LabMecFluUART_init(QueueHandle_t *handleQueue);
 
 void vTaskUART(void *pvParameters);
 
