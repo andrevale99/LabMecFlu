@@ -48,7 +48,7 @@ void vTaskPWM(void *pvParameters)
     {
         lastWake = xTaskGetTickCount();
         if (xQueueReceive(*handleUART_to_PWM, &command,
-                          portMAX_DELAY) == pdPASS)
+                          0) == pdPASS)
         {
             if (command.cmd == 'S')
             {
