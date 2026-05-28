@@ -10,9 +10,11 @@
  * - Captura largura do pulso em nível alto
  * - Resolução de 1 us
  * - PWM 8 bits no GPIO 13
- * - Duty varia de 0 a 255
- * - Incremento de 25 a cada 5 segundos
- * - Exibição contínua em tempo real
+ * - Duty varia automaticamente:
+ *      sobe até 255
+ *      depois desce até 0
+ * - Passo de 25
+ * - Atualização a cada 5 segundos
  *
  * ESP-IDF v5+
  */
@@ -30,7 +32,6 @@
 
 #include "esp_log.h"
 #include "esp_attr.h"
-
 #include "esp_timer.h"
 
 //
@@ -48,6 +49,9 @@
 #define PWM_TIMER          LEDC_TIMER_0
 #define PWM_CHANNEL        LEDC_CHANNEL_0
 
+//
+// PWM 8 bits
+//
 #define PWM_MAX_DUTY       255
 #define PWM_STEP           25
 
@@ -59,14 +63,21 @@ static const char *TAG = "PWM_CAPTURE";
 static gptimer_handle_t gptimer = NULL;
 
 //
-// Variáveis da captura
+// Captura do pulso
 //
 volatile uint64_t pulse_time_us = 0;
 
 //
-// Duty atual
+// PWM
 //
-volatile uint32_t pwm_duty = 0;
+volatile int32_t pwm_duty = 0;
+
+//
+// Direção:
+// true  -> subindo
+// false -> descendo
+//
+volatile bool pwm_up = true;
 
 //
 // Timer periódico
@@ -154,14 +165,30 @@ static void pwm_init(void)
 static void duty_timer_callback(void *arg)
 {
     //
-    // Incrementa duty
+    // Controle subida/descida
     //
 
-    pwm_duty += PWM_STEP;
-
-    if (pwm_duty > PWM_MAX_DUTY)
+    if (pwm_up)
     {
-        pwm_duty = 0;
+        pwm_duty += PWM_STEP;
+
+        if (pwm_duty >= PWM_MAX_DUTY)
+        {
+            pwm_duty = PWM_MAX_DUTY;
+
+            pwm_up = false;
+        }
+    }
+    else
+    {
+        pwm_duty -= PWM_STEP;
+
+        if (pwm_duty <= 0)
+        {
+            pwm_duty = 0;
+
+            pwm_up = true;
+        }
     }
 
     //
@@ -256,7 +283,7 @@ void app_main(void)
     ESP_ERROR_CHECK(
         esp_timer_start_periodic(
             periodic_timer,
-            5000000)); // us
+            5000000/2)); // us
 
     ESP_LOGI(TAG, "Sistema iniciado");
 
@@ -273,11 +300,12 @@ void app_main(void)
             ((float)pwm_duty / PWM_MAX_DUTY) * 100.0f;
 
         //
-        // Exibição contínua
+        // Log em tempo real
         //
 
         ESP_LOGI(TAG,
-                 "Pulso: %llu us | %.3f ms | Duty: %" PRIu32 " | %.1f%%",
+                //  "Pulso: %llu us | %.3f ms | Duty: %ld | %.1f%%",
+                "%llu\t%.3f\t%ld\t%.1f%%",
                  pulse_time_us,
                  pulse_ms,
                  pwm_duty,
